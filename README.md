@@ -1,27 +1,24 @@
 # Matriz-Solver
 
-Calculadora web de **sistemas de ecuaciones lineales** a partir de la **matriz aumentada**.
+Calculadora web de sistemas de ecuaciones lineales a partir de la **matriz aumentada**.
 
 ## Qué hace
 
-- Hasta **8 incógnitas** y **8 ecuaciones**
-- Clasifica el sistema: **consistente determinada**, **indeterminada** o **inconsistente**
-- Muestra la **solución** (única o paramétrica) y el **paso a paso** (Gauss-Jordan)
-- Si es inconsistente, ofrece una forma de referencia con **z = t**
-- Gráficas: 2D, 3D y cortes hasta 8D (Three.js) + coordenadas paralelas
+Resuelve sistemas de hasta 8×8, los clasifica (determinada, indeterminada o inconsistente), muestra solución y paso a paso, y grafica el sistema. Si es inconsistente, da una forma de referencia con `z = t`.
 
-## Cómo usarla
+## Cómo está construido
 
-Necesitas servirla por HTTP (el modo offline con Service Worker no funciona abriendo el archivo a pelo):
+App **estática** (HTML/CSS/JS), sin framework ni build.
 
-```bash
-python3 server.py
-```
+| Archivo | Rol |
+| --- | --- |
+| `index.html` | UI: matriz, controles, resultados, modal de bienvenida |
+| `app.js` | Entrada del usuario, ejemplos, orquesta solver + gráficas, registra el Service Worker |
+| `solver.js` | Gauss-Jordan con fracciones exactas, clasificación y forma paramétrica |
+| `graph.js` | Vista 2D (canvas), 3D/cortes 4D–8D (Three.js) y coordenadas paralelas |
+| `styles.css` | Estilos de la interfaz |
+| `vendor/` | Three.js y OrbitControls locales (para offline) |
+| `sw.js` | Caché offline de todos los assets |
+| `server.py` | Servidor local opcional |
 
-Luego abre `http://localhost:8080`.
-
-También puedes usar cualquier servidor estático apuntando a esta carpeta.
-
-## Offline
-
-La primera visita (con conexión) guarda la app en caché. Las siguientes puedes abrirla **sin internet**.
+Flujo: la matriz aumentada se lee en `app.js` → `solver.js` calcula RREF, tipo y solución → `graph.js` dibuja según el número de variables (rectas, planos o corte 3D con deslizadores).
