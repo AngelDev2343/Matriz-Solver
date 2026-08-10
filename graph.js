@@ -65,8 +65,12 @@
 
   function createScene(container) {
     disposeThree();
-    const w = container.clientWidth || 640;
-    const h = container.clientHeight || 420;
+    // Asegura tamaño aunque el contenedor acabe de mostrarse
+    if (container.clientWidth < 40) {
+      container.style.minHeight = "320px";
+    }
+    const w = Math.max(container.clientWidth || 640, 280);
+    const h = Math.max(container.clientHeight || 420, 280);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf7faf8);
 
@@ -122,7 +126,7 @@
     canvas.height = 64;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 256, 64);
-    ctx.font = "600 28px DM Sans, sans-serif";
+    ctx.font = "600 28px system-ui, sans-serif";
     ctx.fillStyle = color;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -207,7 +211,7 @@
   }
 
   function focusFromResult(result) {
-    if (result.type !== "inconsistente" && result.particularNumbers) {
+    if (result.particularNumbers) {
       const p = result.particularNumbers;
       return new THREE.Vector3(p[0] || 0, p[1] || 0, p[2] || 0);
     }
@@ -258,7 +262,10 @@
       const pt = new THREE.Vector3(p[0] || 0, p[1] || 0, p[2] || 0);
       scene.add(makePoint(pt));
       scene.add(addLabelSprite("solución", pt.clone().add(new THREE.Vector3(0.4, 0.7, 0)), "#c45c26"));
-    } else if (result.type === "indeterminada") {
+    } else if (
+      (result.type === "indeterminada" || result.type === "inconsistente") &&
+      (result.nullspace || []).length
+    ) {
       const samples = sampleSolutionPoints(result, 80);
       const positions = [];
       samples.forEach((v) => {
@@ -267,7 +274,13 @@
       const geom = new THREE.BufferGeometry();
       geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
       scene.add(
-        new THREE.Points(geom, new THREE.PointsMaterial({ color: 0xc45c26, size: 0.18 }))
+        new THREE.Points(
+          geom,
+          new THREE.PointsMaterial({
+            color: result.type === "inconsistente" ? 0x9a3412 : 0xc45c26,
+            size: 0.18,
+          })
+        )
       );
 
       if ((result.nullspace || []).length === 1) {
@@ -286,7 +299,9 @@
         scene.add(
           new THREE.Line(
             new THREE.BufferGeometry().setFromPoints([a, b]),
-            new THREE.LineBasicMaterial({ color: 0xc45c26 })
+            new THREE.LineBasicMaterial({
+              color: result.type === "inconsistente" ? 0x9a3412 : 0xc45c26,
+            })
           )
         );
       }
@@ -306,7 +321,7 @@
     for (let i = 0; i < n; i++) names.push(result.varName(i));
 
     const samples =
-      result.type === "inconsistente"
+      result.type === "inconsistente" && !(result.nullspace && result.nullspace.length)
         ? []
         : sampleSolutionPoints(result, result.type === "determinada" ? 1 : 36);
 
@@ -351,11 +366,11 @@
       ctx.lineTo(x, axisY1);
       ctx.stroke();
       ctx.fillStyle = "#0d6e5f";
-      ctx.font = "600 13px DM Sans, sans-serif";
+      ctx.font = "600 13px system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(names[j], x, 18);
       ctx.fillStyle = "#4d635c";
-      ctx.font = "11px JetBrains Mono, monospace";
+      ctx.font = "11px ui-monospace, monospace";
       ctx.fillText(maxs[j].toFixed(1), x, axisY0 - 4);
       ctx.fillText(mins[j].toFixed(1), x, axisY1 + 14);
     }
@@ -376,7 +391,7 @@
 
     if (!samples.length) {
       ctx.fillStyle = "#9a3412";
-      ctx.font = "600 15px DM Sans, sans-serif";
+      ctx.font = "600 15px system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("Sin solución que proyectar", w / 2, h / 2);
     }
@@ -385,12 +400,15 @@
   function hintFor(result) {
     const n = result.n;
     if (n === 2) {
-      if (result.type === "inconsistente") return "Las rectas no se cruzan (sin solución).";
+      if (result.type === "inconsistente")
+        return "Sistema inconsistente: las rectas no coinciden. Se muestra forma paramétrica de referencia.";
       if (result.type === "determinada")
         return "Cada ecuación es una recta; la solución es su intersección.";
       return "Rectas dependientes: infinitas soluciones.";
     }
     if (n === 3) {
+      if (result.type === "inconsistente")
+        return "Inconsistente: los planos no se cruzan en un punto común. Referencia con z = t (Three.js).";
       return "Three.js: cada ecuación es un plano en R³. Arrastra para orbitar · rueda para zoom.";
     }
     const extras = [];

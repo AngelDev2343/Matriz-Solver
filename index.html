@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d6e5f" />
+  <meta name="description" content="Calculadora de sistemas de ecuaciones lineales con matriz aumentada, paso a paso y gráficas." />
   <title>Calculadora de Ecuaciones Lineales</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -17,7 +16,7 @@
       <p class="lead">
         Escribe el sistema como matriz aumentada, resuélvelo paso a paso y ve si es
         consistente determinada, indeterminada o inconsistente. Gráficas con
-        <strong>Three.js</strong> hasta 8 dimensiones.
+        Three.js hasta 8 dimensiones.
       </p>
     </header>
 
@@ -89,8 +88,22 @@
       </section>
     </main>
   </div>
-  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <div id="welcome-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+    <div class="modal-backdrop" data-close-welcome></div>
+    <div class="modal-card">
+      <p class="modal-eyebrow">Bienvenida</p>
+      <h2 id="welcome-title">Listo para usar sin conexión</h2>
+      <p class="modal-text">
+        Esta calculadora se guarda en tu navegador. La próxima vez que entres
+        podrás usarla <strong>sin internet</strong>.
+      </p>
+      <button type="button" class="btn primary" id="welcome-ok">Entendido</button>
+    </div>
+  </div>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/OrbitControls.js"></script>
   <script src="solver.js"></script>
   <script src="graph.js"></script>
   <script src="app.js"></script>

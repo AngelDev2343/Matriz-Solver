@@ -294,7 +294,7 @@
               (i + 1) +
               " quedó como 0 = " +
               M[i][n].toString() +
-              ", lo cual es imposible. El sistema no tiene solución.",
+              ", lo cual es imposible. El sistema es inconsistente; a continuación se da una forma paramétrica de referencia.",
             matrix: cloneMatrix(M),
           });
           break;
@@ -306,6 +306,153 @@
 
     if (!inconsistent) {
       rank = pivotCols.length;
+    } else {
+      rank = pivotCols.length;
+    }
+
+    function exprToString(e) {
+      if (e.label) return e.label;
+      const parts = [];
+      if (!e.const.isZero() || Object.keys(e.coeffs).length === 0) {
+        parts.push(e.const.toString());
+      }
+      Object.keys(e.coeffs).forEach((p) => {
+        const c = e.coeffs[p];
+        if (c.isZero()) return;
+        const abs = c.abs().toString();
+        const bare = abs === "1" ? p : abs + p;
+        if (parts.length === 0) {
+          parts.push(c.n < 0 ? "-" + bare : bare);
+        } else if (c.n < 0) {
+          parts.push("− " + bare);
+        } else {
+          parts.push("+ " + bare);
+        }
+      });
+      return parts.join(" ") || "0";
+    }
+
+    function exprToHTML(e) {
+      if (e.label) return "<span class='param'>" + e.label + "</span>";
+      const parts = [];
+      if (!e.const.isZero() || Object.keys(e.coeffs).length === 0) {
+        parts.push(e.const.toHTML());
+      }
+      Object.keys(e.coeffs).forEach((p) => {
+        const c = e.coeffs[p];
+        if (c.isZero()) return;
+        const bare =
+          c.abs().n === 1 && c.abs().d === 1
+            ? "<span class='param'>" + p + "</span>"
+            : c.abs().toHTML() + "<span class='param'>" + p + "</span>";
+        if (parts.length === 0) {
+          parts.push(c.n < 0 ? "−" + bare : bare);
+        } else if (c.n < 0) {
+          parts.push(" − " + bare);
+        } else {
+          parts.push(" + " + bare);
+        }
+      });
+      return parts.join("") || "0";
+    }
+
+    /**
+     * Forma paramétrica desde RREF.
+     * Si forceFreeIdx >= 0, esa variable se toma libre (p. ej. z = t en inconsistentes).
+     */
+    function buildParametric(forceFreeIdx) {
+      let usedPivots = pivotCols.slice();
+      const frees = [];
+
+      if (forceFreeIdx >= 0 && forceFreeIdx < n) {
+        usedPivots = usedPivots.filter((c) => c !== forceFreeIdx);
+      }
+
+      const isPivot = Array(n).fill(false);
+      usedPivots.forEach((c) => {
+        isPivot[c] = true;
+      });
+      for (let j = 0; j < n; j++) {
+        if (!isPivot[j]) frees.push(j);
+      }
+      if (forceFreeIdx >= 0 && forceFreeIdx < n && frees.indexOf(forceFreeIdx) < 0) {
+        frees.push(forceFreeIdx);
+        frees.sort((a, b) => a - b);
+      }
+
+      const paramNames = frees.map((_, k) => "t" + (k === 0 && frees.length === 1 ? "" : k + 1));
+      const exprs = Array(n).fill(null);
+
+      frees.forEach((j, k) => {
+        exprs[j] = { const: new Fraction(0), coeffs: {}, label: paramNames[k] };
+      });
+
+      // Mapear columna pivote → fila en RREF
+      const rowOfPivot = {};
+      for (let i = 0; i < pivotCols.length; i++) {
+        rowOfPivot[pivotCols[i]] = i;
+      }
+
+      usedPivots.forEach((c) => {
+        const i = rowOfPivot[c];
+        if (i === undefined) return;
+        const constTerm = M[i][n].clone();
+        const coeffs = {};
+        for (let k = 0; k < frees.length; k++) {
+          const fv = frees[k];
+          const coef = M[i][fv].neg();
+          if (!coef.isZero()) coeffs[paramNames[k]] = coef;
+        }
+        exprs[c] = { const: constTerm, coeffs };
+      });
+
+      // Si alguna variable quedó sin expresión, ponerla en 0
+      for (let j = 0; j < n; j++) {
+        if (!exprs[j]) exprs[j] = { const: new Fraction(0), coeffs: {} };
+      }
+
+      const part = Array(n).fill(null);
+      for (let j = 0; j < n; j++) {
+        if (exprs[j].label) part[j] = new Fraction(0);
+        else part[j] = exprs[j].const.clone();
+      }
+
+      const nspace = frees.map((fv) => {
+        const v = Array(n).fill(0);
+        v[fv] = 1;
+        usedPivots.forEach((c) => {
+          const i = rowOfPivot[c];
+          if (i === undefined) return;
+          v[c] = M[i][fv].neg().toNumber();
+        });
+        return v;
+      });
+
+      const text = exprs.map((e, i) => varName(i) + " = " + exprToString(e)).join(", ");
+      const html =
+        "<p>Variables libres: " +
+        frees.map((j, k) => varName(j) + " = " + paramNames[k]).join(", ") +
+        ".</p><ul class='sol-list'>" +
+        exprs
+          .map(
+            (e, i) =>
+              "<li><span class='var'>" +
+              varName(i) +
+              "</span> = " +
+              exprToHTML(e) +
+              "</li>"
+          )
+          .join("") +
+        "</ul>";
+
+      return {
+        freeVars: frees,
+        particular: part,
+        nullspace: nspace,
+        solutionText: text,
+        solutionHTML: html,
+        exprs: exprs,
+      };
     }
 
     let type;
@@ -313,7 +460,7 @@
     let typeExplain;
     let solutionText = "";
     let solutionHTML = "";
-    const freeVars = [];
+    let freeVars = [];
     const particular = Array(n).fill(null);
     let nullspace = [];
 
@@ -321,9 +468,33 @@
       type = "inconsistente";
       typeLabel = "Sistema inconsistente";
       typeExplain =
-        "No hay solución: las ecuaciones se contradicen (rango de A menor que el de la matriz aumentada).";
-      solutionText = "Sin solución.";
-      solutionHTML = "<p>No existe ningún valor de las incógnitas que cumpla todas las ecuaciones.</p>";
+        "Las ecuaciones se contradicen (no hay solución exacta). Aun así se muestra una forma paramétrica de referencia con " +
+        (n >= 3 ? "z = t" : varName(n - 1) + " = t") +
+        " a partir de las filas no contradictorias.";
+
+      // Preferir z (índice 2) como parámetro t; si hay < 3 variables, la última.
+      const forceFree = n >= 3 ? 2 : n - 1;
+      const param = buildParametric(forceFree);
+      freeVars = param.freeVars;
+      nullspace = param.nullspace;
+      for (let i = 0; i < n; i++) particular[i] = param.particular[i];
+      solutionText = param.solutionText;
+      solutionHTML =
+        "<p class='warn-note'>Sin solución exacta. Forma de referencia (" +
+        varName(forceFree) +
+        " = t):</p>" +
+        param.solutionHTML;
+
+      steps.push({
+        title: "Forma paramétrica de referencia",
+        detail:
+          "Como el sistema es inconsistente, tomamos " +
+          varName(forceFree) +
+          " = t y expresamos el resto con las ecuaciones no contradictorias: " +
+          solutionText +
+          ".",
+        matrix: cloneMatrix(M),
+      });
     } else if (rank === n) {
       type = "determinada";
       typeLabel = "Consistente determinada";
@@ -368,113 +539,12 @@
         n +
         " incógnitas).";
 
-      const isPivot = Array(n).fill(false);
-      pivotCols.forEach((c) => {
-        isPivot[c] = true;
-      });
-      for (let j = 0; j < n; j++) {
-        if (!isPivot[j]) freeVars.push(j);
-      }
-
-      const paramNames = freeVars.map((_, k) => "t" + (k === 0 && freeVars.length === 1 ? "" : k + 1));
-
-      // Expresar variables pivote en función de las libres
-      const exprs = Array(n).fill(null);
-      freeVars.forEach((j, k) => {
-        exprs[j] = { const: new Fraction(0), coeffs: {}, label: paramNames[k] };
-      });
-
-      for (let i = 0; i < pivotCols.length; i++) {
-        const c = pivotCols[i];
-        const constTerm = M[i][n].clone();
-        const coeffs = {};
-        for (let k = 0; k < freeVars.length; k++) {
-          const fv = freeVars[k];
-          const coef = M[i][fv].neg(); // x_c = b - sum(a_fv * free)
-          if (!coef.isZero()) coeffs[paramNames[k]] = coef;
-        }
-        exprs[c] = { const: constTerm, coeffs };
-      }
-
-      // Particular: libres = 0
-      for (let j = 0; j < n; j++) {
-        if (exprs[j].label) particular[j] = new Fraction(0);
-        else particular[j] = exprs[j].const.clone();
-      }
-
-      // Base del espacio nulo (direcciones de las variables libres)
-      nullspace = freeVars.map((fv) => {
-        const v = Array(n).fill(0);
-        v[fv] = 1;
-        for (let i = 0; i < pivotCols.length; i++) {
-          const c = pivotCols[i];
-          v[c] = M[i][fv].neg().toNumber();
-        }
-        return v;
-      });
-
-      function exprToString(e) {
-        if (e.label) return e.label;
-        const parts = [];
-        if (!e.const.isZero() || Object.keys(e.coeffs).length === 0) {
-          parts.push(e.const.toString());
-        }
-        Object.keys(e.coeffs).forEach((p) => {
-          const c = e.coeffs[p];
-          if (c.isZero()) return;
-          const abs = c.abs().toString();
-          const bare = abs === "1" ? p : abs + p;
-          if (parts.length === 0) {
-            parts.push(c.n < 0 ? "-" + bare : bare);
-          } else if (c.n < 0) {
-            parts.push("− " + bare);
-          } else {
-            parts.push("+ " + bare);
-          }
-        });
-        return parts.join(" ") || "0";
-      }
-
-      function exprToHTML(e) {
-        if (e.label) return "<span class='param'>" + e.label + "</span>";
-        const parts = [];
-        if (!e.const.isZero() || Object.keys(e.coeffs).length === 0) {
-          parts.push(e.const.toHTML());
-        }
-        Object.keys(e.coeffs).forEach((p) => {
-          const c = e.coeffs[p];
-          if (c.isZero()) return;
-          const bare =
-            c.abs().n === 1 && c.abs().d === 1
-              ? "<span class='param'>" + p + "</span>"
-              : c.abs().toHTML() + "<span class='param'>" + p + "</span>";
-          if (parts.length === 0) {
-            parts.push(c.n < 0 ? "−" + bare : bare);
-          } else if (c.n < 0) {
-            parts.push(" − " + bare);
-          } else {
-            parts.push(" + " + bare);
-          }
-        });
-        return parts.join("") || "0";
-      }
-
-      solutionText = exprs.map((e, i) => varName(i) + " = " + exprToString(e)).join(", ");
-      solutionHTML =
-        "<p>Variables libres: " +
-        freeVars.map((j, k) => varName(j) + " = " + paramNames[k]).join(", ") +
-        ".</p><ul class='sol-list'>" +
-        exprs
-          .map(
-            (e, i) =>
-              "<li><span class='var'>" +
-              varName(i) +
-              "</span> = " +
-              exprToHTML(e) +
-              "</li>"
-          )
-          .join("") +
-        "</ul>";
+      const param = buildParametric(-1);
+      freeVars = param.freeVars;
+      nullspace = param.nullspace;
+      for (let i = 0; i < n; i++) particular[i] = param.particular[i];
+      solutionText = param.solutionText;
+      solutionHTML = param.solutionHTML;
 
       steps.push({
         title: "Infinitas soluciones",

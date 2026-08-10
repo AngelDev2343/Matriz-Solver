@@ -1,4 +1,62 @@
 (function () {
+  const WELCOME_KEY = "matriz-solver-welcome-seen";
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch((err) => {
+        console.warn("Service Worker no registrado:", err);
+      });
+    });
+  }
+
+  function setupWelcomeModal() {
+    const modal = document.getElementById("welcome-modal");
+    if (!modal) return;
+    try {
+      if (localStorage.getItem(WELCOME_KEY) === "1") return;
+    } catch {
+      /* private mode */
+    }
+
+    const close = () => {
+      modal.hidden = true;
+      document.body.classList.remove("modal-open");
+      try {
+        localStorage.setItem(WELCOME_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+    };
+
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
+    document.getElementById("welcome-ok").addEventListener("click", close);
+    modal.querySelectorAll("[data-close-welcome]").forEach((el) => {
+      el.addEventListener("click", close);
+    });
+    document.addEventListener("keydown", function onKey(e) {
+      if (e.key === "Escape" && !modal.hidden) {
+        close();
+        document.removeEventListener("keydown", onKey);
+      }
+    });
+  }
+
+  registerServiceWorker();
+  setupWelcomeModal();
+
+  if (!window.LinearSolver) {
+    alert("No se pudo cargar el motor de cálculo (solver.js).");
+    return;
+  }
+  if (!window.SystemGraph || !window.THREE) {
+    alert(
+      "No se pudo cargar Three.js. Sirve la carpeta con python3 server.py y recarga."
+    );
+    return;
+  }
+
   const { Fraction, solveAugmented, VAR_NAMES } = window.LinearSolver;
   const { renderSystemGraph, destroySystemGraph } = window.SystemGraph;
 
@@ -143,6 +201,37 @@
   }
 
   let lastMatrix = null;
+  let lastResult = null;
+
+  function syncCanvasSizes() {
+    const width = Math.min(640, Math.floor((graphBlock.clientWidth || 640) - 4));
+    [
+      { el: canvas, h: 420 },
+      { el: parallel, h: 280 },
+    ].forEach(({ el, h }) => {
+      if (!el) return;
+      const cssW = Math.max(280, width);
+      el.style.width = "100%";
+      el.style.maxWidth = "100%";
+      // Resolución interna = CSS (evita desenfoque raro al reescalar el dibujo)
+      if (el.width !== cssW) el.width = cssW;
+      if (el.height !== h) el.height = h;
+    });
+  }
+
+  function drawGraphs(result) {
+    syncCanvasSizes();
+    renderSystemGraph({
+      result: result,
+      matrix: lastMatrix,
+      view3d: view3d,
+      canvas2d: canvas,
+      canvasParallel: parallel,
+      sliceHost: sliceControls,
+      hintEl: graphHint,
+      modeLabel: modeLabel,
+    });
+  }
 
   function renderResult(result) {
     results.hidden = false;
@@ -173,16 +262,8 @@
     });
 
     graphBlock.hidden = false;
-    renderSystemGraph({
-      result: result,
-      matrix: lastMatrix,
-      view3d: view3d,
-      canvas2d: canvas,
-      canvasParallel: parallel,
-      sliceHost: sliceControls,
-      hintEl: graphHint,
-      modeLabel: modeLabel,
-    });
+    lastResult = result;
+    drawGraphs(result);
 
     results.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -202,6 +283,9 @@
     destroySystemGraph();
     buildMatrix();
     results.hidden = true;
+    graphBlock.hidden = true;
+    lastMatrix = null;
+    lastResult = null;
   }
 
   function loadExample() {
@@ -239,6 +323,16 @@
       e.preventDefault();
       solve();
     }
+  });
+
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (!results.hidden && lastResult && lastMatrix) {
+        drawGraphs(lastResult);
+      }
+    }, 150);
   });
 
   syncEqOptions();
