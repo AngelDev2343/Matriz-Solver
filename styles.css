@@ -418,7 +418,48 @@ select:focus,
   margin-top: 0.5rem;
 }
 
-#graph {
+.graph-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.graph-head h3 {
+  margin: 0;
+}
+
+.mode-pill {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  background: #e7f5f1;
+  border: 1px solid #b7d9cf;
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+}
+
+.view3d {
+  width: 100%;
+  height: min(52vh, 460px);
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f7faf8;
+  touch-action: none;
+}
+
+.view3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+#graph,
+#parallel {
   width: 100%;
   max-width: 640px;
   height: auto;
@@ -426,6 +467,57 @@ select:focus,
   border-radius: 14px;
   background: #f7faf8;
   display: block;
+}
+
+#parallel {
+  max-width: 100%;
+}
+
+.subhead {
+  margin: 1.1rem 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.hint.thin {
+  margin-bottom: 0.55rem;
+  font-size: 0.85rem;
+}
+
+.slice-controls {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: #f3f7f5;
+}
+
+.slice-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.slice-field {
+  display: grid;
+  grid-template-columns: 2rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+}
+
+.slice-field input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.slice-field output {
+  text-align: right;
+  color: var(--ink);
+  font-weight: 500;
 }
 
 @keyframes rise {

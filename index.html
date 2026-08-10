@@ -16,7 +16,8 @@
       <h1>Calculadora de ecuaciones lineales</h1>
       <p class="lead">
         Escribe el sistema como matriz aumentada, resuélvelo paso a paso y ve si es
-        consistente determinada, indeterminada o inconsistente.
+        consistente determinada, indeterminada o inconsistente. Gráficas con
+        <strong>Three.js</strong> hasta 8 dimensiones.
       </p>
     </header>
 
@@ -70,9 +71,17 @@
         <div id="solution" class="solution"></div>
 
         <div class="graph-block" id="graph-block" hidden>
-          <h3>Gráfica</h3>
+          <div class="graph-head">
+            <h3>Gráfica</h3>
+            <span class="mode-pill" id="mode-label">Vista</span>
+          </div>
           <p class="hint" id="graph-hint"></p>
-          <canvas id="graph" width="640" height="480" aria-label="Gráfica del sistema"></canvas>
+          <div class="slice-controls" id="slice-controls" hidden></div>
+          <div id="view3d" class="view3d" hidden aria-label="Vista 3D interactiva"></div>
+          <canvas id="graph" width="640" height="420" hidden aria-label="Gráfica 2D"></canvas>
+          <h4 class="subhead">Coordenadas paralelas</h4>
+          <p class="hint thin">Cada eje es una incógnita; las polilíneas son soluciones (o muestras del conjunto solución).</p>
+          <canvas id="parallel" width="640" height="280" aria-label="Coordenadas paralelas"></canvas>
         </div>
 
         <h3>Paso a paso</h3>
@@ -80,7 +89,10 @@
       </section>
     </main>
   </div>
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="solver.js"></script>
+  <script src="graph.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -315,6 +315,7 @@
     let solutionHTML = "";
     const freeVars = [];
     const particular = Array(n).fill(null);
+    let nullspace = [];
 
     if (inconsistent) {
       type = "inconsistente";
@@ -401,6 +402,17 @@
         else particular[j] = exprs[j].const.clone();
       }
 
+      // Base del espacio nulo (direcciones de las variables libres)
+      nullspace = freeVars.map((fv) => {
+        const v = Array(n).fill(0);
+        v[fv] = 1;
+        for (let i = 0; i < pivotCols.length; i++) {
+          const c = pivotCols[i];
+          v[c] = M[i][fv].neg().toNumber();
+        }
+        return v;
+      });
+
       function exprToString(e) {
         if (e.label) return e.label;
         const parts = [];
@@ -474,6 +486,10 @@
       });
     }
 
+    const particularNumbers = particular.map((p) =>
+      p && typeof p.toNumber === "function" ? p.toNumber() : 0
+    );
+
     return {
       n,
       m,
@@ -484,6 +500,8 @@
       pivotCols,
       freeVars,
       particular,
+      particularNumbers,
+      nullspace,
       solutionText,
       solutionHTML,
       rref: M,
