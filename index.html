@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora de Ecuaciones Lineales</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <p class="brand">Matrices aumentadas</p>
+      <h1>Calculadora de ecuaciones lineales</h1>
+      <p class="lead">
+        Escribe el sistema como matriz aumentada, resuélvelo paso a paso y ve si es
+        consistente determinada, indeterminada o inconsistente.
+      </p>
+    </header>
+
+    <main class="layout">
+      <section class="panel" aria-labelledby="input-title">
+        <h2 id="input-title">Tu sistema</h2>
+
+        <div class="controls">
+          <label class="field">
+            <span>Incógnitas</span>
+            <select id="vars" aria-label="Número de incógnitas">
+              <option value="2" selected>2 (x, y)</option>
+              <option value="3">3 (x, y, z)</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Ecuaciones</span>
+            <select id="eqs" aria-label="Número de ecuaciones">
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+            </select>
+          </label>
+        </div>
+
+        <p class="hint" id="matrix-hint">
+          Matriz aumentada [A | b]. Cada fila es una ecuación.
+        </p>
+
+        <div class="matrix-wrap" id="matrix-wrap"></div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="solve-btn">Resolver</button>
+          <button type="button" class="btn ghost" id="clear-btn">Limpiar</button>
+          <button type="button" class="btn ghost" id="example-btn">Ejemplo</button>
+        </div>
+      </section>
+
+      <section class="panel results" id="results" hidden>
+        <h2>Resultado</h2>
+        <div id="classification" class="classification"></div>
+        <div id="solution" class="solution"></div>
+
+        <div class="graph-block" id="graph-block" hidden>
+          <h3>Gráfica</h3>
+          <p class="hint" id="graph-hint"></p>
+          <canvas id="graph" width="640" height="480" aria-label="Gráfica del sistema"></canvas>
+        </div>
+
+        <h3>Paso a paso</h3>
+        <ol class="steps" id="steps"></ol>
+      </section>
+    </main>
+  </div>
+  <script src="solver.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
